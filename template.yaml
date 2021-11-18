@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Il bot per counter "Più pulito"
+Transform:
+- AWS::Serverless-2016-10-31
+Parameters:
+  TokenApi:
+    Type: String
+Resources:
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+  MainFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./src/handlers
+      Handler: handler.index
+      Runtime: nodejs14.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Environment:
+        Variables:
+          TOKEN: !Ref TokenApi
+          DB: !Ref DynamoDBTable
+      Description: Webhook for Telegram Bot
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /webhook
+            Method: post
+Outputs:
+  Endpoint:
+    Description: Webhook
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/webhook"
